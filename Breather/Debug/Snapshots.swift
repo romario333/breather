@@ -1,0 +1,48 @@
+#if DEBUG
+import AppKit
+import SwiftUI
+
+/// `-BreatherSnapshot <folder>` renders the break screen and settings to PNGs, then quits.
+/// It checks layout without covering anyone's screen.
+@MainActor
+enum Snapshots {
+    static func runIfRequested() {
+        guard let path = UserDefaults.standard.string(forKey: "BreatherSnapshot") else { return }
+        let dir = URL(filePath: path)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let now = Date()
+        let content = BreakContent(since: now - 48, endsAt: now + 252, suggestion: "Look at something far away.")
+
+        for (name, size, offset) in [("break", CGSize(width: 1440, height: 900), 0.0),
+                                     ("break-later", CGSize(width: 1440, height: 900), 5.0),
+                                     ("break-ultrawide", CGSize(width: 1720, height: 720), 0.0)] {
+            let view = BreakView(content: content, onPostpone: {}, onSkip: {}, frozenAt: now + offset)
+                .frame(width: size.width, height: size.height)
+            capture(view, size: size, appearance: .darkAqua, to: dir.appending(path: "\(name).png"))
+        }
+        for appearance in [NSAppearance.Name.darkAqua, .aqua] {
+            let name = appearance == .darkAqua ? "dark" : "light"
+            capture(SettingsView().environment(AppModel()), size: CGSize(width: 440, height: 300), appearance: appearance,
+                    to: dir.appending(path: "settings-\(name).png"))
+        }
+        print("Snapshots written to \(dir.path)")
+        exit(0)
+    }
+
+    /// Shaders, forms and canvases only draw inside a window.
+    private static func capture(_ view: some View, size: CGSize, appearance: NSAppearance.Name, to url: URL) {
+        let window = NSWindow(contentRect: CGRect(origin: CGPoint(x: -10000, y: -10000), size: size),
+                              styleMask: [.borderless], backing: .buffered, defer: false)
+        window.appearance = NSAppearance(named: appearance)
+        window.backgroundColor = appearance == .darkAqua ? NSColor(white: 0.17, alpha: 1) : NSColor(white: 0.95, alpha: 1)
+        let host = NSHostingView(rootView: view)
+        host.frame = CGRect(origin: .zero, size: size)
+        window.contentView = host
+        host.layoutSubtreeIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.4))
+        guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { return }
+        host.cacheDisplay(in: host.bounds, to: rep)
+        try? rep.representation(using: .png, properties: [:])?.write(to: url)
+    }
+}
+#endif

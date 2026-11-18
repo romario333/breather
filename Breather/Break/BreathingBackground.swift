@@ -38,50 +38,72 @@ struct BreakTheme: Identifiable, Equatable {
         0xA2687A, 0x7A4E86, 0x2A2350,
     ], glow: 0x8A74B8)
 
-    /// Each break gets the next theme in this list.
-    static let rotation = [sunset, forest, deepBlue, lavender]
+    /// A break fades through the themes in this order. Neighbors are close in hue, so the fades stay clean.
+    static let rotation = [sunset, lavender, deepBlue, forest]
 
-    /// The next theme in the rotation. It carries on where it left off after a relaunch.
-    @MainActor static func next(defaults: UserDefaults = .standard) -> BreakTheme {
-        let index = defaults.integer(forKey: "themeIndex") % rotation.count
-        defaults.set(index + 1, forKey: "themeIndex")
-        return rotation[index]
+    @MainActor private static var last: BreakTheme?
+
+    /// A random theme to start a break with, never the one the last break started with.
+    @MainActor static func next() -> BreakTheme {
+        let pick = rotation.filter { $0 != last }.randomElement()!
+        last = pick
+        return pick
     }
 }
 
 /// A slow mesh gradient. The middle brightens and dims on a ten-second cycle, about one calm breath.
+/// Over the break it fades through all the themes, starting with `theme`.
 struct BreathingBackground: View {
     let theme: BreakTheme
+    let since: Date
     var frozenAt: Date?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         if let frozenAt {
-            mesh(at: frozenAt.timeIntervalSinceReferenceDate)
+            mesh(at: frozenAt)
         } else {
             TimelineView(.animation(minimumInterval: 1 / 30, paused: reduceMotion)) { context in
-                mesh(at: context.date.timeIntervalSinceReferenceDate)
+                mesh(at: context.date)
             }
         }
     }
 
-    private func mesh(at t: Double) -> some View {
+    private func mesh(at date: Date) -> some View {
+        let t = date.timeIntervalSinceReferenceDate
+        let (grid, glow) = palette(elapsed: date.timeIntervalSince(since))
         func wave(_ period: Double, _ phase: Double) -> Float { Float(sin(t * 2 * .pi / period + phase)) }
         let breath = Double(wave(10, 0) + 1) / 2
 
         return MeshGradient(
             width: 3, height: 3,
             points: [
-                [0, 0], [0.5 + 0.10 * wave(23, 0), 0], [1, 0],
-                [0, 0.5 + 0.10 * wave(19, 1)], [0.5 + 0.09 * wave(17, 2), 0.45 + 0.07 * wave(13, 3)], [1, 0.5 + 0.10 * wave(21, 4)],
-                [0, 1], [0.5 + 0.12 * wave(29, 5), 1], [1, 1],
+                [0, 0], [0.5 + 0.2 * wave(19, 0), 0], [1, 0],
+                [0, 0.5 + 0.2 * wave(17, 1)], [0.5 + 0.18 * wave(13, 2), 0.45 + 0.12 * wave(11, 3)], [1, 0.5 + 0.2 * wave(21, 4)],
+                [0, 1], [0.5 + 0.2 * wave(23, 5), 1], [1, 1],
             ],
-            colors: theme.colors.enumerated().map { index, color in
-                index == 4 ? color.mix(with: Color(hex: theme.glow), by: 0.15 + 0.3 * breath) : color
+            colors: grid.enumerated().map { index, color in
+                index == 4 ? color.mix(with: glow, by: 0.8 * breath) : color
             },
             smoothsColors: true
         )
         .overlay(Grain())
+    }
+
+    /// Each theme stays for a while, then fades into the next one.
+    private func palette(elapsed: Double) -> (grid: [Color], glow: Color) {
+        let hold = 55.0, fade = 20.0
+        let rotation = BreakTheme.rotation
+        let start = rotation.firstIndex(of: theme) ?? 0
+        let step = Int(max(0, elapsed) / (hold + fade))
+        let x = min(1, max(0, max(0, elapsed).truncatingRemainder(dividingBy: hold + fade) - hold) / fade)
+        let progress = x * x * (3 - 2 * x)
+        let from = rotation[(start + step) % rotation.count]
+        let to = rotation[(start + step + 1) % rotation.count]
+        return (
+            zip(from.colors, to.colors).map { $0.mix(with: $1, by: progress) },
+            Color(hex: from.glow).mix(with: Color(hex: to.glow), by: progress)
+        )
     }
 }
 

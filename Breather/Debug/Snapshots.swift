@@ -15,6 +15,7 @@ enum Snapshots {
 
         for (name, size, offset) in [("break", CGSize(width: 1440, height: 900), 0.0),
                                      ("break-later", CGSize(width: 1440, height: 900), 5.0),
+                                     ("break-fading", CGSize(width: 1440, height: 900), 17.0),
                                      ("break-ultrawide", CGSize(width: 1720, height: 720), 0.0)] {
             let view = BreakView(content: content, onPostpone: {}, onSkip: {}, frozenAt: now + offset)
                 .frame(width: size.width, height: size.height)

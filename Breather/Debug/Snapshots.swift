@@ -18,6 +18,7 @@ enum Snapshots {
                                      ("break-fading", CGSize(width: 1440, height: 900), 17.0),
                                      ("break-ultrawide", CGSize(width: 1720, height: 720), 0.0)] {
             let view = BreakView(content: content, onPostpone: {}, onSkip: {}, frozenAt: now + offset)
+                .environment(AppModel())
                 .frame(width: size.width, height: size.height)
             capture(view, size: size, appearance: .darkAqua, to: dir.appending(path: "\(name).png"))
         }
@@ -25,6 +26,7 @@ enum Snapshots {
             var themed = content
             themed.theme = theme
             let view = BreakView(content: themed, onPostpone: {}, onSkip: {}, frozenAt: now)
+                .environment(AppModel())
                 .frame(width: 1440, height: 900)
             capture(view, size: CGSize(width: 1440, height: 900), appearance: .darkAqua,
                     to: dir.appending(path: "theme-\(index + 1)-\(theme.name.lowercased().replacingOccurrences(of: " ", with: "-")).png"))

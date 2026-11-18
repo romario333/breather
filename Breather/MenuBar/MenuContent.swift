@@ -10,7 +10,9 @@ struct MenuContent: View {
         if model.cycle.pausedUntil != nil {
             Button("Resume") { model.restart() }
         } else {
-            Button("Take a Break Now") { model.startBreak() }
+            if !model.cycle.phase.isOnBreak {
+                Button("Take a Break Now") { model.startBreak() }
+            }
             Button("Restart Work Cycle") { model.restart() }
         }
         Divider()

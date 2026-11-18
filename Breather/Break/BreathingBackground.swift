@@ -41,6 +41,17 @@ struct BreakTheme: Identifiable, Equatable {
     /// A break fades through the themes in this order. Neighbors are close in hue, so the fades stay clean.
     static let rotation = [sunset, lavender, deepBlue, forest]
 
+    /// Where a break that started with `start` is after `elapsed` seconds.
+    /// Each theme stays for a while, then fades into the next one.
+    static func fade(startingWith start: BreakTheme, elapsed: Double) -> (from: BreakTheme, to: BreakTheme, progress: Double) {
+        let hold = 55.0, fade = 20.0
+        let first = rotation.firstIndex(of: start) ?? 0
+        let elapsed = max(0, elapsed)
+        let step = Int(elapsed / (hold + fade))
+        let x = min(1, max(0, elapsed.truncatingRemainder(dividingBy: hold + fade) - hold) / fade)
+        return (rotation[(first + step) % rotation.count], rotation[(first + step + 1) % rotation.count], x * x * (3 - 2 * x))
+    }
+
     @MainActor private static var last: BreakTheme?
 
     /// A random theme to start a break with, never the one the last break started with.
@@ -71,7 +82,9 @@ struct BreathingBackground: View {
 
     private func mesh(at date: Date) -> some View {
         let t = date.timeIntervalSinceReferenceDate
-        let (grid, glow) = palette(elapsed: date.timeIntervalSince(since))
+        let (from, to, progress) = BreakTheme.fade(startingWith: theme, elapsed: date.timeIntervalSince(since))
+        let grid = zip(from.colors, to.colors).map { $0.mix(with: $1, by: progress) }
+        let glow = Color(hex: from.glow).mix(with: Color(hex: to.glow), by: progress)
         func wave(_ period: Double, _ phase: Double) -> Float { Float(sin(t * 2 * .pi / period + phase)) }
         let breath = Double(wave(10, 0) + 1) / 2
 
@@ -88,22 +101,6 @@ struct BreathingBackground: View {
             smoothsColors: true
         )
         .overlay(Grain())
-    }
-
-    /// Each theme stays for a while, then fades into the next one.
-    private func palette(elapsed: Double) -> (grid: [Color], glow: Color) {
-        let hold = 55.0, fade = 20.0
-        let rotation = BreakTheme.rotation
-        let start = rotation.firstIndex(of: theme) ?? 0
-        let step = Int(max(0, elapsed) / (hold + fade))
-        let x = min(1, max(0, max(0, elapsed).truncatingRemainder(dividingBy: hold + fade) - hold) / fade)
-        let progress = x * x * (3 - 2 * x)
-        let from = rotation[(start + step) % rotation.count]
-        let to = rotation[(start + step + 1) % rotation.count]
-        return (
-            zip(from.colors, to.colors).map { $0.mix(with: $1, by: progress) },
-            Color(hex: from.glow).mix(with: Color(hex: to.glow), by: progress)
-        )
     }
 }
 
@@ -128,6 +125,55 @@ private struct Grain: View {
             .blendMode(.overlay)
             .opacity(0.05)
             .allowsHitTesting(false)
+    }
+}
+
+/// A color in OKLab, where equal steps in lightness look equal across hues.
+struct OKLab {
+    var l, a, b: Double
+
+    init(l: Double, a: Double, b: Double) {
+        (self.l, self.a, self.b) = (l, a, b)
+    }
+
+    init(hex: UInt32) {
+        func linear(_ byte: UInt32) -> Double {
+            let c = Double(byte & 0xFF) / 255
+            return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+        }
+        let (r, g, b) = (linear(hex >> 16), linear(hex >> 8), linear(hex))
+        let l = cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
+        let m = cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
+        let s = cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+        self.init(
+            l: 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+            a: 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+            b: 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+        )
+    }
+
+    func mixed(with other: OKLab, by fraction: Double) -> OKLab {
+        OKLab(l: l + (other.l - l) * fraction, a: a + (other.a - a) * fraction, b: b + (other.b - b) * fraction)
+    }
+
+    /// The same hue, lighter on a dark color and darker on a light one, so it reads clearly on top of it.
+    var contrasting: OKLab {
+        let chroma = (a * a + b * b).squareRoot()
+        let scale = chroma > 0 ? min(2 * chroma, 0.1) / chroma : 0
+        return OKLab(l: l < 0.55 ? l + 0.4 : l - 0.4, a: a * scale, b: b * scale)
+    }
+
+    var color: Color {
+        let l = pow(self.l + 0.3963377774 * a + 0.2158037573 * b, 3)
+        let m = pow(self.l - 0.1055613458 * a - 0.0638541728 * b, 3)
+        let s = pow(self.l - 0.0894841775 * a - 1.2914855480 * b, 3)
+        func clamp(_ c: Double) -> Double { min(1, max(0, c)) }
+        return Color(
+            .sRGBLinear,
+            red: clamp(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+            green: clamp(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+            blue: clamp(-0.0041960771 * l - 0.7034186147 * m + 1.7076147010 * s)
+        )
     }
 }
 

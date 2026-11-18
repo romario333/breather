@@ -40,6 +40,7 @@ final class AppModel {
         )
         presenter.onPostpone = { [weak self] in self?.postpone() }
         presenter.onSkip = { [weak self] in self?.restart() }
+        presenter.model = self
 
         let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }

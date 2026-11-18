@@ -13,12 +13,19 @@ struct BreakContent: Equatable {
 final class BreakPresenter {
     var onPostpone: () -> Void = {}
     var onSkip: () -> Void = {}
+    /// The break screen's menu needs the model, as the menu bar menu does.
+    weak var model: AppModel?
+
+    /// Below pop-up menus, so the break screen's menu shows on top of it.
+    static let level = NSWindow.Level(rawValue: NSWindow.Level.popUpMenu.rawValue - 2)
 
     private var content: BreakContent?
     private var shownAt = Date()
     private var panels: [BreakPanel] = []
     private var keyMonitor: Any?
     private var screenObserver: NSObjectProtocol?
+    private var keyWindowObserver: NSObjectProtocol?
+    private var raised: [NSWindow] = []
 
     init() {
         screenObserver = NotificationCenter.default.addObserver(
@@ -29,6 +36,12 @@ final class BreakPresenter {
                 self.removePanels(animated: false)
                 self.openPanels(animated: false)
             }
+        }
+        keyWindowObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main
+        ) { [weak self] notification in
+            let window = notification.object as? NSWindow
+            MainActor.assumeIsolated { self?.raise(window) }
         }
     }
 
@@ -62,7 +75,7 @@ final class BreakPresenter {
                 onPostpone: { [weak self] in self?.onPostpone() },
                 onSkip: { [weak self] in self?.onSkip() }
             )
-            panel.contentView = FirstClickHostingView(rootView: view)
+            panel.contentView = FirstClickHostingView(rootView: view.environment(model))
             panel.alphaValue = animated ? 0 : 1
             panel.orderFrontRegardless()
             if screen == keyScreen { panel.makeKey() }
@@ -75,6 +88,7 @@ final class BreakPresenter {
             panels.append(panel)
         }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard event.window is BreakPanel else { return event }
             let keyCode = event.keyCode
             let modifiers = event.modifierFlags
             let handled = MainActor.assumeIsolated {
@@ -89,6 +103,8 @@ final class BreakPresenter {
         keyMonitor = nil
         let closing = panels
         panels = []
+        for window in raised { window.level = .normal }
+        raised = []
         guard animated else {
             for panel in closing { panel.orderOut(nil) }
             return
@@ -101,6 +117,13 @@ final class BreakPresenter {
             try? await Task.sleep(for: .seconds(0.65))
             for panel in closing { panel.orderOut(nil) }
         }
+    }
+
+    /// Windows opened during a break, like Settings, go above the break screen.
+    private func raise(_ window: NSWindow?) {
+        guard let window, !panels.isEmpty, window.level == .normal else { return }
+        window.level = NSWindow.Level(rawValue: Self.level.rawValue + 1)
+        raised.append(window)
     }
 
     /// Esc postpones. Keys typed in the first moment were meant for the app you were in.
@@ -120,7 +143,7 @@ final class BreakPanel: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         isFloatingPanel = true
         // After isFloatingPanel, which resets the level to floating.
-        level = .screenSaver
+        level = BreakPresenter.level
         hidesOnDeactivate = false
         isMovable = false
         isOpaque = true

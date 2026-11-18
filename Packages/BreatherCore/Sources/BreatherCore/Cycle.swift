@@ -17,6 +17,10 @@ public enum Phase: Equatable, Sendable {
     case working(since: Date, breakAt: Date)
     case onBreak(since: Date, endsAt: Date)
     case paused(until: Date)
+
+    public var isOnBreak: Bool {
+        if case .onBreak = self { true } else { false }
+    }
 }
 
 /// The work and break rhythm. Every change takes `now` so tests can drive the clock.

@@ -18,6 +18,9 @@ struct BreakView: View {
                 column(u: u)
                     // The ring sits a little above the middle, so the whole column looks centered.
                     .offset(y: 2 * u)
+                BreakMenu(content: content, u: u)
+                    .padding(2.4 * u)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
             }
         }
         .foregroundStyle(Palette.mist)
@@ -98,6 +101,61 @@ private struct DottedRing: View {
             for index in 0..<count where level(index) > 0 {
                 context.fill(path(index), with: .color(Palette.mist.opacity(0.16 + 0.84 * level(index))))
             }
+        }
+    }
+}
+
+/// The menu bar menu, for when the break screen covers the menu bar.
+/// It shows only while the mouse moves, so it stays out of the way while you rest.
+private struct BreakMenu: View {
+    let content: BreakContent
+    let u: CGFloat
+    @State private var mouseMoved = false
+    @State private var hovering = false
+
+    private var shown: Bool { mouseMoved || hovering }
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 0.25, paused: !shown)) { context in
+            Menu {
+                MenuContent()
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.system(size: 1.4 * u, weight: .light))
+                    .foregroundStyle(tint(at: context.date))
+                    .contentShape(Rectangle())
+            }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Breather menu")
+        }
+        .opacity(shown ? 1 : 0)
+        .animation(.easeInOut(duration: 0.6), value: shown)
+        .onHover { hovering = $0 }
+        .task { await watchMouse() }
+    }
+
+    /// The gradient's color in the top-right corner, where the icon sits, lifted so the icon stands out.
+    private func tint(at date: Date) -> Color {
+        let (from, to, progress) = BreakTheme.fade(startingWith: content.theme, elapsed: date.timeIntervalSince(content.since))
+        let corner = OKLab(hex: from.grid[2]).mixed(with: OKLab(hex: to.grid[2]), by: progress)
+        return corner.contrasting.color
+    }
+
+    /// Polling sees the mouse on every screen, whichever panel is key.
+    private func watchMouse() async {
+        var last = NSEvent.mouseLocation
+        var movedAt = Date.distantPast
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(200))
+            let location = NSEvent.mouseLocation
+            if location != last {
+                last = location
+                movedAt = Date()
+            }
+            mouseMoved = Date().timeIntervalSince(movedAt) < 3
         }
     }
 }

@@ -21,15 +21,17 @@ There is one kind of break. No short and long breaks, no Pomodoro.
 
 ```sh
 brew install xcodegen
-./scripts/build.sh            # Debug build into build/
-./scripts/install.sh          # Release build into ~/Applications, then starts it
+make build      # Debug build into build/
+make run        # build and start the debug app
+make install    # release build into ~/Applications, then starts it
+make test       # timing rules tests
 ```
 
 Or run `xcodegen generate` and open `Breather.xcodeproj`.
 
 Open at login uses `SMAppService`, so it works best from the copy in `~/Applications`.
 
-The timing rules live in the `BreatherCore` package. Run its tests with `swift test --package-path Packages/BreatherCore`.
+The timing rules live in the `BreatherCore` package.
 
 Debug builds take two launch arguments:
 

@@ -1,10 +1,11 @@
 import AppKit
 import BreatherCore
 
-/// A small version of the break screen's ring. Lit dots are the work left before the next break.
+/// A ring like the break screen's. The bright arc runs clockwise from the top and is the work left
+/// before the next break. The faint arc is the work already done.
 @MainActor
 enum MenuBarIcon {
-    private static let dots = 12
+    private static let steps = 100
     private static var cache: [Int: NSImage] = [:]
 
     static func image(for phase: Phase, now: Date) -> NSImage {
@@ -12,31 +13,45 @@ enum MenuBarIcon {
         case .paused:
             return symbol("pause.circle")
         case .onBreak:
-            return ring(lit: 0)
+            return ring(step: 0)
         case .working:
-            let lit = Int((phase.remainingFraction(now: now) * Double(dots)).rounded(.up))
-            return ring(lit: lit)
+            return ring(step: Int((phase.remainingFraction(now: now) * Double(steps)).rounded(.up)))
         }
     }
 
-    private static func ring(lit: Int) -> NSImage {
-        if let cached = cache[lit] { return cached }
-        let size = NSSize(width: 18, height: 18)
-        let image = NSImage(size: size, flipped: true) { rect in
+    static func ring(step: Int) -> NSImage {
+        if let cached = cache[step] { return cached }
+        let fraction = Double(step) / Double(steps)
+        let image = NSImage(size: NSSize(width: 18, height: 18), flipped: true) { rect in
             let center = CGPoint(x: rect.midX, y: rect.midY)
-            let radius: CGFloat = 6.6
-            for index in 0..<dots {
-                let angle = Double(index) / Double(dots) * 2 * .pi - .pi / 2
-                let point = CGPoint(x: center.x + radius * cos(angle), y: center.y + radius * sin(angle))
-                let isLit = index < lit
-                let d: CGFloat = isLit ? 2.6 : 1.8
-                NSColor.black.withAlphaComponent(isLit ? 1 : 0.35).setFill()
-                NSBezierPath(ovalIn: CGRect(x: point.x - d / 2, y: point.y - d / 2, width: d, height: d)).fill()
+            let radius: CGFloat = 6.4
+            // A small gap on each side of the bright arc keeps the two arcs apart.
+            let gap = 30.0
+            let split = 360 * fraction
+
+            func arc(from start: Double, to end: Double, width: CGFloat, alpha: CGFloat) {
+                guard end - start > 1 else { return }
+                let path = NSBezierPath()
+                // Flipped view, so angles grow clockwise. -90 is the top.
+                path.appendArc(withCenter: center, radius: radius,
+                               startAngle: start - 90, endAngle: end - 90, clockwise: false)
+                path.lineWidth = width
+                path.lineCapStyle = .round
+                NSColor.black.withAlphaComponent(alpha).setStroke()
+                path.stroke()
+            }
+
+            switch fraction {
+            case 1: arc(from: 0, to: 360, width: 2, alpha: 1)
+            case 0: arc(from: 0, to: 360, width: 1.4, alpha: 0.4)
+            default:
+                arc(from: 0, to: split, width: 2, alpha: 1)
+                arc(from: split + gap, to: 360 - gap, width: 1.4, alpha: 0.4)
             }
             return true
         }
         image.isTemplate = true
-        cache[lit] = image
+        cache[step] = image
         return image
     }
 

@@ -33,6 +33,23 @@ enum Snapshots {
             capture(SettingsView().environment(AppModel()), size: CGSize(width: 440, height: 300), appearance: appearance,
                     to: dir.appending(path: "settings-\(name).png"))
         }
+        let icons = VStack(spacing: 0) {
+            ForEach([(Color(red: 0.2, green: 0.45, blue: 0.75), Color.white), (Color(white: 0.93), Color.black)], id: \.1) { background, ink in
+                HStack(spacing: 14) {
+                    ForEach([100, 80, 58, 30, 8, 0], id: \.self) { step in
+                        Image(nsImage: MenuBarIcon.ring(step: step)).renderingMode(.template).foregroundStyle(ink)
+                    }
+                }
+                .padding(8)
+                .background(background)
+            }
+        }
+        let renderer = ImageRenderer(content: icons)
+        renderer.scale = 6
+        if let image = renderer.cgImage {
+            try? NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])?
+                .write(to: dir.appending(path: "menubar-icons.png"))
+        }
         print("Snapshots written to \(dir.path)")
         exit(0)
     }

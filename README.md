@@ -12,7 +12,7 @@ There is one kind of break. No short and long breaks, no Pomodoro.
 
 - **Esc** or **Postpone 5 min** hides the break and brings it back in 5 minutes.
 - **Skip break** starts a new 50-minute work cycle.
-- The menu bar icon is a small ring of 12 dots. The lit dots show how much of the work cycle is left.
+- The menu bar icon is a ring. The bright arc, clockwise from the top, is the work left before the next break. The faint arc is the work already done.
 - The menu has **Take a Break Now**, **Restart Work Cycle**, **Pause for 1 Hour** and **Pause Until Tomorrow**.
 - **Settings** sets the work and break lengths and turns on **Open Breather at login**.
 - Time away from the Mac counts as a break if it lasts at least as long as one: lunch, a locked screen or a sleeping Mac start a fresh cycle when you come back.

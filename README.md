@@ -2,6 +2,8 @@
 
 A Mac menu bar app that makes you take a break. Every 50 minutes it covers every screen with a calm, slowly moving gradient and a dotted ring that counts down a 5-minute break. When the break is over, the screen fades away and the next 50 minutes start.
 
+Each break uses the next of four color themes: sunset, forest, deep blue and lavender dusk.
+
 ![Break screen](docs/break-screen.png)
 
 There is one kind of break. No short and long breaks, no Pomodoro.

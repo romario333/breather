@@ -5,6 +5,7 @@ struct BreakContent: Equatable {
     var since: Date
     var endsAt: Date
     var suggestion: String
+    var theme: BreakTheme
 }
 
 /// Covers every screen with a borderless panel above everything, including full-screen apps.
@@ -34,7 +35,11 @@ final class BreakPresenter {
     func show(since: Date, endsAt: Date) {
         if let content, content.since == since, content.endsAt == endsAt { return }
         let isNew = content == nil
-        content = BreakContent(since: since, endsAt: endsAt, suggestion: content?.suggestion ?? Suggestions.next())
+        content = BreakContent(
+            since: since, endsAt: endsAt,
+            suggestion: content?.suggestion ?? Suggestions.next(),
+            theme: content?.theme ?? BreakTheme.next()
+        )
         if isNew { shownAt = Date() }
         removePanels(animated: false)
         openPanels(animated: isNew)

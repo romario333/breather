@@ -14,7 +14,7 @@ struct BreakView: View {
         GeometryReader { geometry in
             let u = min(geometry.size.width / 100, geometry.size.height / 62.5)
             ZStack {
-                BreathingBackground(frozenAt: frozenAt)
+                BreathingBackground(theme: content.theme, frozenAt: frozenAt)
                 column(u: u)
                     // The ring sits a little above the middle, so the whole column looks centered.
                     .offset(y: 2 * u)

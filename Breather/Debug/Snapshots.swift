@@ -11,7 +11,7 @@ enum Snapshots {
         let dir = URL(filePath: path)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let now = Date()
-        let content = BreakContent(since: now - 48, endsAt: now + 252, suggestion: "Look at something far away.")
+        let content = BreakContent(since: now - 48, endsAt: now + 252, suggestion: "Look at something far away.", theme: .sunset)
 
         for (name, size, offset) in [("break", CGSize(width: 1440, height: 900), 0.0),
                                      ("break-later", CGSize(width: 1440, height: 900), 5.0),
@@ -19,6 +19,14 @@ enum Snapshots {
             let view = BreakView(content: content, onPostpone: {}, onSkip: {}, frozenAt: now + offset)
                 .frame(width: size.width, height: size.height)
             capture(view, size: size, appearance: .darkAqua, to: dir.appending(path: "\(name).png"))
+        }
+        for (index, theme) in BreakTheme.rotation.enumerated() {
+            var themed = content
+            themed.theme = theme
+            let view = BreakView(content: themed, onPostpone: {}, onSkip: {}, frozenAt: now)
+                .frame(width: 1440, height: 900)
+            capture(view, size: CGSize(width: 1440, height: 900), appearance: .darkAqua,
+                    to: dir.appending(path: "theme-\(index + 1)-\(theme.name.lowercased().replacingOccurrences(of: " ", with: "-")).png"))
         }
         for appearance in [NSAppearance.Name.darkAqua, .aqua] {
             let name = appearance == .darkAqua ? "dark" : "light"

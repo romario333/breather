@@ -20,18 +20,22 @@ There is one kind of break. No short and long breaks, no Pomodoro.
 
 ## Install
 
-There is no prebuilt download yet, so you build it from source. You need macOS 15 or later, Xcode 16 or later and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
+There is no prebuilt download yet, so you build it from source. You need macOS 15 or later and Xcode 16 or later.
 
 ```sh
-brew install xcodegen
 git clone https://github.com/romario333/breather.git
 cd breather
 make install
 ```
 
-`make install` puts a release build in `~/Applications` and starts it.
+`make install` puts a release build in `~/Applications` and starts it. You don't need to open Xcode.
 
-The project signs with my Apple developer team. Put your own team ID in `DEVELOPMENT_TEAM` in `project.yml` before you build.
+The app is signed to run on your Mac only. To sign it with your Apple developer team, run `make install TEAM=<your team ID>`.
+
+If the build fails on a fresh Mac:
+
+- "xcodebuild requires Xcode": the command line tools are selected instead of Xcode. Run `sudo xcode-select -s /Applications/Xcode.app`.
+- A message about the Xcode license: run `sudo xcodebuild -license accept`, or open Xcode once.
 
 ## Development
 
@@ -42,7 +46,7 @@ make install    # release build into ~/Applications, then starts it
 make test       # timing rules tests
 ```
 
-Or run `xcodegen generate` and open `Breather.xcodeproj`.
+Or open `Breather.xcodeproj` in Xcode. The project picks up new files in `Breather/` on its own.
 
 Open at login uses `SMAppService`, so it works best from the copy in `~/Applications`.
 

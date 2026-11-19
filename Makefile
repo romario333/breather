@@ -5,10 +5,11 @@ APP := $(PRODUCTS)/$(CONFIG)/Breather.app
 .PHONY: build run install test clean
 
 ## Build into build/. `make build CONFIG=Release` for a release build.
+## Without TEAM the app is signed to run on this Mac only. `make install TEAM=<team ID>` signs with your Apple developer team.
 build:
-	xcodegen generate --quiet
 	xcodebuild -project Breather.xcodeproj -scheme Breather -configuration $(CONFIG) \
-		-destination 'generic/platform=macOS' -derivedDataPath build/DerivedData -quiet build
+		-destination 'generic/platform=macOS' -derivedDataPath build/DerivedData -quiet build \
+		$(if $(TEAM),DEVELOPMENT_TEAM=$(TEAM))
 
 ## Build and start the debug app.
 run: build
@@ -28,4 +29,4 @@ test:
 	swift test --package-path Packages/BreatherCore
 
 clean:
-	rm -rf build Breather.xcodeproj
+	rm -rf build

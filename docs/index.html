@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Breather. A break every 50 minutes.</title>
+<meta name="description" content="A Mac menu bar app. Every 50 minutes it covers every screen for a 5-minute break.">
+<meta property="og:title" content="Breather">
+<meta property="og:description" content="A Mac menu bar app. Every 50 minutes it covers every screen for a 5-minute break.">
+<meta property="og:image" content="https://romario333.github.io/breather/break-screen.png">
+<meta property="og:url" content="https://romario333.github.io/breather/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%235C2448'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23EAF3F0' stroke-width='3' stroke-linecap='round' stroke-dasharray='0.1 5.555'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/base.css">
+<style>
+  /* The first screen is laid out like the app's break screen. The headline sits where the suggestion does. */
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+  .stage {
+    min-height: calc(100svh - 70px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--gutter) 9svh;
+    text-align: center;
+  }
+  .ring { width: min(42svh, 76vw); aspect-ratio: 1; }
+  .ring .time { font-size: min(10.6svh, 19vw); transition: opacity 0.3s ease; }
+  .copy { display: flex; flex-direction: column; align-items: center; transition: opacity 0.4s ease; }
+  h1 { margin-top: 4.5svh; font-size: clamp(1.5rem, 1.1rem + 1.7vw, 2.5rem); line-height: 1.15; letter-spacing: -0.015em; }
+  .lede { margin-top: 0.7em; max-width: 34em; font-size: 1.1rem; opacity: 0.8; text-wrap: balance; }
+  .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 3.6svh; }
+
+  /* The end of a break. The dots fly off the ring, a wave runs out from it and the copy changes underneath. */
+  .ending .time, .ending .copy { opacity: 0; }
+  .again .ring { animation: appear 0.9s ease; }
+  @keyframes appear {
+    from { opacity: 0; }
+  }
+
+  /* Work has no break screen, so the ring goes. What stays is what the menu bar shows: the icon and the time to the next break. */
+  .working .ring, .stage:not(.working) .status { display: none; }
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 16px 7px 11px;
+    border-radius: 999px;
+    background: rgb(234 243 240 / 0.11);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  .status svg { width: 20px; height: 20px; }
+  .working h1 { margin-top: 3.2svh; font-size: clamp(2rem, 1.2rem + 3.2vw, 3.8rem); line-height: 1.08; letter-spacing: -0.025em; }
+  .working .lede { margin-top: 1em; }
+  .ending .copy { pointer-events: none; }
+  .ring::after {
+    content: '';
+    position: absolute;
+    inset: 6.7%;
+    border: 1px solid var(--mist);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .wave .ring::after { animation: wave 0.9s cubic-bezier(0.1, 0.6, 0.2, 1); }
+  @keyframes wave {
+    from { opacity: 0.7; transform: scale(1); }
+    to { opacity: 0; transform: scale(5.5); }
+  }
+  .working .btn.solid { animation: glow 2.4s ease-out 0.4s; }
+  @keyframes glow {
+    30% { box-shadow: 0 0 70px rgb(234 243 240 / 0.75); }
+  }
+
+  .more { max-width: 1040px; margin: 0 auto; padding: 4svh var(--gutter) 0; }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 44px 72px; }
+  .facts h2, .install h2 { font-size: 1.35rem; font-weight: 500; letter-spacing: -0.01em; }
+  .facts p, .install p { margin-top: 0.35em; opacity: 0.8; }
+  .install { margin-top: 84px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 24px 72px; align-items: start; }
+  .prompt { white-space: pre-wrap; font-size: 0.92rem; }
+  .foot { max-width: 1040px; margin: 48px auto 0; padding-bottom: 56px; }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<header class="topbar">
+  <a class="wordmark" href="#">Breather</a>
+  <a href="https://github.com/romario333/breather">GitHub</a>
+</header>
+
+<main>
+  <section class="stage" id="stage">
+    <div class="ring">
+      <svg id="ring"></svg>
+      <div class="time" id="time" aria-hidden="true">5:00</div>
+    </div>
+    <div class="copy">
+      <p class="status"><svg id="icon"></svg><span id="next">Next break in 50:00</span></p>
+      <h1 id="headline">Every 50 minutes, your Mac shows you this.</h1>
+      <p class="lede" id="lede">Breather is a menu bar app. It covers every screen for a 5&#8209;minute break, then gives the screen back.</p>
+      <div class="actions">
+        <a class="btn solid" href="https://github.com/romario333/breather">Get Breather on GitHub</a>
+        <a class="btn" href="#more">How it works</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="more" id="more">
+    <div class="facts">
+      <div>
+        <h2>One kind of break</h2>
+        <p>50 minutes of work, 5 minutes of break. No short and long breaks, no Pomodoro, no complexity.</p>
+      </div>
+      <div>
+        <h2>Bad moment? Press Esc</h2>
+        <p>Esc hides the break and brings it back in 5 minutes. Skip break starts a new 50 minutes.</p>
+      </div>
+      <div>
+        <h2>Time away counts as a break</h2>
+        <p>Away from your Mac for 5 minutes or longer? Breather counts that as your break.</p>
+      </div>
+      <div>
+        <h2>A ring in the menu bar</h2>
+        <p>The icon is a ring that empties as you work. When it is empty, the break starts. Its menu pauses Breather for an hour or until tomorrow.</p>
+      </div>
+    </div>
+
+    <div class="install">
+      <div>
+        <h2>Install</h2>
+        <p>There is no download. Tell your coding agent to build it.</p>
+      </div>
+<pre class="prompt">Build and install Breather from https://github.com/romario333/breather. Follow the README.</pre>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <p>Inspired by <a href="https://apps.apple.com/us/app/tadama-workflow-timer/id1415817706?mt=12">Tadama</a>. Free and open source under the <a href="https://github.com/romario333/breather/blob/main/LICENSE">MIT license</a>. Made by Roman Mašek.</p>
+</footer>
+
+<script src="assets/breather.js"></script>
+<script>
+  const background = Breather.gradient(document.getElementById('bg'), { theme: Breather.nextTheme() });
+  const ring = Breather.ring(document.getElementById('ring'));
+  const icon = Breather.icon(document.getElementById('icon'));
+  const next = document.getElementById('next');
+  const stage = document.getElementById('stage');
+  const time = document.getElementById('time');
+  const still = matchMedia('(prefers-reduced-motion: reduce)');
+  const now = () => performance.now() / 1000;
+
+  // The page runs the app's cycle in real time: a 5-minute break, 50 minutes of work, the next break.
+  // For testing, ?break=5&work=10 sets both lengths in seconds.
+  const query = new URLSearchParams(location.search);
+  const lengths = { break: Number(query.get('break')) || 300, work: Number(query.get('work')) || 3000 };
+  const copy = {
+    break: {
+      headline: 'Every 50 minutes, your Mac shows you this.',
+      lede: 'Breather is a menu bar app. It covers every screen for a 5‑minute break, then gives the screen back.',
+    },
+    work: {
+      headline: 'Break’s over. Back to work!',
+      lede: 'That is all Breather does. It lives in your menu bar and the next break comes on its own.',
+    },
+  };
+
+  let phase = { kind: 'break', until: now() + lengths.break };
+  let ending = null;
+  let switching = false;
+
+  function start(kind) {
+    phase = { kind, until: now() + lengths[kind] };
+    document.getElementById('headline').textContent = copy[kind].headline;
+    document.getElementById('lede').textContent = copy[kind].lede;
+    stage.classList.toggle('working', kind === 'work');
+  }
+
+  function show(left) {
+    const fraction = left / lengths[phase.kind];
+    const working = phase.kind === 'work';
+    const label = working ? next : time;
+    const text = working ? `Next break in ${Breather.countdown(left)}` : Breather.countdown(left);
+    if (label.textContent !== text) label.textContent = text;
+    working ? icon.set(fraction) : ring.set(fraction);
+  }
+
+  // The break screen fades in over the page, as it does over the desktop.
+  function takeBreak() {
+    if (still.matches) return start('break');
+    switching = true;
+    stage.classList.add('ending');
+    setTimeout(() => {
+      start('break');
+      show(lengths.break);
+      stage.classList.add('again');
+      stage.classList.remove('ending');
+      switching = false;
+    }, 400);
+  }
+
+  function endBreak() {
+    if (still.matches) return start('work');
+    ending = { at: now() };
+    ring.set(1);
+    stage.classList.add('ending', 'wave');
+    background?.rush(1.6);
+  }
+
+  const easeOut = (x) => 1 - (1 - x) ** 3;
+
+  // The dots fly out, turn around the center and fade away. The ring is gone before the work copy fades in.
+  function playEnding(t) {
+    const amount = t < 0.5 ? easeOut(2 * t) : 1 + 0.24 * (t - 0.5);
+    ring.scatter(amount, 0.5 * Math.PI * easeOut(Math.min(1, t / 1.25)), 1 - Math.min(1, Math.max(0, (t - 0.75) / 0.5)));
+    if (t >= 1.25) {
+      start('work');
+      show(lengths.work);
+      ring.scatter(0);
+      stage.classList.remove('ending', 'wave', 'again');
+      ending = null;
+    }
+  }
+
+  function tick() {
+    const t = now();
+    if (ending) {
+      playEnding(t - ending.at);
+    } else if (!switching) {
+      if (phase.until > t) show(phase.until - t);
+      else phase.kind === 'break' ? endBreak() : takeBreak();
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+</script>
+</body>
+</html>

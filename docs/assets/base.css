@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@200..700&display=swap');
+
+:root {
+  --mist: #EAF3F0;
+  --ink: #1B1230;
+  --rounded: ui-rounded, 'SF Pro Rounded', 'Nunito', system-ui, sans-serif;
+  --gutter: clamp(20px, 5vw, 64px);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; margin: 0; }
+
+/* Shows until the canvas draws, and when WebGL is off. */
+html {
+  background:
+    radial-gradient(60% 55% at 50% 45%, #8E3B4F 0%, transparent 70%),
+    radial-gradient(50% 50% at 0% 100%, #B0613E 0%, transparent 70%),
+    var(--ink);
+  background-attachment: fixed;
+}
+
+body {
+  min-height: 100svh;
+  font-family: var(--rounded);
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--mist);
+  -webkit-font-smoothing: antialiased;
+}
+
+#bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+a { color: inherit; text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--mist); outline-offset: 3px; border-radius: 6px; }
+
+h1, h2, h3 { font-weight: 400; text-wrap: balance; }
+p { text-wrap: pretty; }
+
+.wordmark { font-weight: 600; font-size: 1.05rem; letter-spacing: -0.01em; text-decoration: none; }
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px var(--gutter);
+}
+.topbar a:not(.wordmark) { opacity: 0.8; text-decoration: none; }
+.topbar a:not(.wordmark):hover { opacity: 1; }
+
+/* The break screen's glass buttons. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.72em 1.6em;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(234 243 240 / 0.11);
+  color: var(--mist);
+  font: 500 1rem/1.2 var(--rounded);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease-out;
+}
+.btn:hover { background: rgb(234 243 240 / 0.2); }
+.btn:focus-visible { border-radius: 999px; }
+.btn.solid { background: var(--mist); color: var(--ink); }
+.btn.solid:hover { background: #fff; }
+
+.time {
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.ring { position: relative; display: grid; place-items: center; }
+.ring svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+
+pre {
+  overflow-x: auto;
+  padding: 18px 22px;
+  border-radius: 16px;
+  background: rgb(10 6 20 / 0.32);
+  font: 0.86rem/1.7 ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+.foot {
+  padding: 40px var(--gutter) 88px;
+  font-size: 0.92rem;
+  opacity: 0.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
